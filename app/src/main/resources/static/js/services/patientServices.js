@@ -1,97 +1,140 @@
-// patientServices
+
 import { API_BASE_URL } from "../config/config.js";
-const PATIENT_API = API_BASE_URL + '/patient'
 
+// Base Patient API endpoint
+const PATIENT_API = API_BASE_URL + "/patient";
 
-//For creating a patient in db
+// Patient signup
 export async function patientSignup(data) {
-  try {
-    const response = await fetch(`${PATIENT_API}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json"
-        },
-        body: JSON.stringify(data)
-      }
-    );
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.message);
+    try {
+        // Send patient details to the signup endpoint
+        const response = await fetch(`${PATIENT_API}/signup`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        return {
+            success: response.ok,
+            message: result.message || (response.ok
+                ? "Signup successful"
+                : "Signup failed")
+        };
+
+    } catch (error) {
+        console.error("Patient signup error:", error);
+
+        return {
+            success: false,
+            message: "An error occurred during signup"
+        };
     }
-    return { success: response.ok, message: result.message }
-  }
-  catch (error) {
-    console.error("Error :: patientSignup :: ", error)
-    return { success: false, message: error.message }
-  }
 }
 
-//For logging in patient
+// Patient login
 export async function patientLogin(data) {
-  console.log("patientLogin :: ", data)
-  return await fetch(`${PATIENT_API}/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  });
+    try {
+        // Send login credentials to the login endpoint
+        const response = await fetch(`${PATIENT_API}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        });
 
+        // Return the full response for frontend processing
+        return response;
 
+    } catch (error) {
+        console.error("Patient login error:", error);
+        return null;
+    }
 }
 
-// For getting patient data (name ,id , etc ). Used in booking appointments
+// Fetch logged-in patient details
 export async function getPatientData(token) {
-  try {
-    const response = await fetch(`${PATIENT_API}/${token}`);
-    const data = await response.json();
-    if (response.ok) return data.patient;
-    return null;
-  } catch (error) {
-    console.error("Error fetching patient details:", error);
-    return null;
-  }
+    try {
+        // Fetch patient details using the authentication token
+        const response = await fetch(`${PATIENT_API}/profile`, {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch patient data");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        console.error("Error fetching patient data:", error);
+        return null;
+    }
 }
 
-// the Backend API for fetching the patient record(visible in Doctor Dashboard) and Appointments (visible in Patient Dashboard) are same based on user(patient/doctor).
+// Fetch patient appointments
 export async function getPatientAppointments(id, token, user) {
-  try {
-    const response = await fetch(`${PATIENT_API}/${id}/${user}/${token}`);
-    const data = await response.json();
-    console.log(data.appointments)
-    if (response.ok) {
-      return data.appointments;
+    try {
+        // Construct the appointment URL based on the requesting user
+        const params = new URLSearchParams({ user: user });
+
+        const response = await fetch(
+            `${PATIENT_API}/appointments/${id}?${params.toString()}`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch appointments");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        console.error("Error fetching appointments:", error);
+        return null;
     }
-    return null;
-  }
-  catch (error) {
-    console.error("Error fetching patient details:", error);
-    return null;
-  }
 }
 
+// Filter appointments
 export async function filterAppointments(condition, name, token) {
-  try {
-    const response = await fetch(`${PATIENT_API}/filter/${condition}/${name}/${token}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    try {
+        // Construct query parameters for appointment filtering
+        const params = new URLSearchParams();
 
-    if (response.ok) {
-      const data = await response.json();
-      return data;
+        if (condition) params.append("condition", condition);
+        if (name) params.append("name", name);
 
-    } else {
-      console.error("Failed to fetch doctors:", response.statusText);
-      return { appointments: [] };
+        const response = await fetch(
+            `${PATIENT_API}/appointments/filter?${params.toString()}`,
+            {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
 
+        if (!response.ok) {
+            throw new Error("Failed to filter appointments");
+        }
+
+        return await response.json();
+
+    } catch (error) {
+        console.error("Error filtering appointments:", error);
+        alert("Unable to filter appointments. Please try again.");
+        return [];
     }
-  } catch (error) {
-    console.error("Error:", error);
-    alert("Something went wrong!");
-    return { appointments: [] };
-  }
 }
