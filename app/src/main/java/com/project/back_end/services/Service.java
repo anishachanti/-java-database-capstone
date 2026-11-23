@@ -1,9 +1,9 @@
 package com.project.back_end.services;
 
 import com.project.back_end.models.*;
-import com.project.back_end.repositories.AdminRepository;
-import com.project.back_end.repositories.DoctorRepository;
-import com.project.back_end.repositories.PatientRepository;
+import com.project.back_end.repo.AdminRepository;
+import com.project.back_end.repo.DoctorRepository;
+import com.project.back_end.repo.PatientRepository;
 import com.project.back_end.dto.Login;
 
 import java.util.Map;
@@ -39,14 +39,17 @@ public class Service {
         this.patientService = patientService;
     }
 
-    public ResponseEntity<Map<String, String>> validateToken(String token, String user) {
+    public ResponseEntity<Map<String, String>> validateToken(
+        String token, String user) {
+
         Map<String, String> response = new HashMap<>();
 
-        Map<String, Object> tokenData = tokenService.validateToken(token, user);
-
-        if (tokenData == null) {
+        if (!tokenService.validateToken(token, user)) {
             response.put("message", "Invalid or expired token");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(response);
         }
 
         return ResponseEntity.ok(response);
@@ -62,54 +65,60 @@ public class Service {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
-        String token = tokenService.generateToken(admin.getUsername(), "admin");
+        String token = tokenService.generateToken(admin.getUsername());
 
         response.put("token", token);
         return ResponseEntity.ok(response);
     }
 
-    public Map<String, Object> filterDoctor(String name, String specialty, String time) {
+    public Map<String, Object> filterDoctor(
+        String name, String specialty, String time) {
+
+        List<Doctor> doctors;
 
         if (name != null && !name.isBlank()
                 && specialty != null && !specialty.isBlank()
                 && time != null && !time.isBlank()) {
 
-            return doctorService.filterDoctorsByNameSpecilityandTime(
+            doctors = doctorService.filterDoctorsByNameSpecilityandTime(
                     name, specialty, time);
 
         } else if (name != null && !name.isBlank()
                 && specialty != null && !specialty.isBlank()) {
 
-            return doctorService.filterDoctorByNameAndSpecility(name, specialty);
+            doctors = doctorService.filterDoctorByNameAndSpecility(name, specialty);
 
         } else if (name != null && !name.isBlank()
                 && time != null && !time.isBlank()) {
 
-            return doctorService.filterDoctorByNameAndTime(name, time);
+            doctors = doctorService.filterDoctorByNameAndTime(name, time);
 
         } else if (specialty != null && !specialty.isBlank()
                 && time != null && !time.isBlank()) {
 
-            return doctorService.filterDoctorByTimeAndSpecility(specialty, time);
+            doctors = doctorService.filterDoctorByTimeAndSpecility(time, specialty);
 
         } else if (name != null && !name.isBlank()) {
 
-            return doctorService.findDoctorByName(name);
+            doctors = doctorService.findDoctorByName(name);
 
         } else if (specialty != null && !specialty.isBlank()) {
 
-            return doctorService.filterDoctorBySpecility(specialty);
+            doctors = doctorService.filterDoctorBySpecility(specialty);
 
         } else if (time != null && !time.isBlank()) {
 
-            return doctorService.filterDoctorsByTime(time);
+            doctors = doctorService.filterDoctorsByTime(time);
+
+        } else {
+            doctors = doctorRepository.findAll();
         }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("doctors", doctorRepository.findAll());
+        response.put("doctors", doctors);
+
         return response;
     }
-
 
     public int validateAppointment(Appointment appointment) {
 
@@ -138,6 +147,9 @@ public class Service {
 
 
     public boolean validatePatient(Patient patient) {
+        System.out.println("Patient email: " + patient.getEmail());
+        System.out.println("Patient phone: " + patient.getPhone());
+        
         Patient existingPatient = patientRepository.findByEmailOrPhone(
                 patient.getEmail(),
                 patient.getPhone()
@@ -157,7 +169,7 @@ public class Service {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
     
-        String token = tokenService.generateToken(patient.getEmail(), "patient");
+        String token = tokenService.generateToken(patient.getEmail());
     
         response.put("token", token);
         return ResponseEntity.ok(response);
@@ -169,15 +181,12 @@ public class Service {
 
         Map<String, Object> response = new HashMap<>();
 
-        Map<String, Object> tokenData =
-                tokenService.validateToken(token, "patient");
-
-        if (tokenData == null || !tokenData.containsKey("email")) {
+        if (!tokenService.validateToken(token, "patient")) {
             response.put("message", "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
-
-        String email = tokenData.get("email").toString();
+        
+        String email = tokenService.extractIdentifier(token);
         Patient patient = patientRepository.findByEmail(email);
 
         if (patient == null) {

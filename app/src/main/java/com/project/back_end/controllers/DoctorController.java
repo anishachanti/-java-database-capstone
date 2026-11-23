@@ -177,12 +177,7 @@ public class DoctorController {
             @PathVariable String time,
             @PathVariable String speciality) {
 
-        Map<String, Object> response = new HashMap<>();
-
-        List<Doctor> doctors =
-                service.filterDoctor(name, speciality, time);
-
-        response.put("doctors", doctors);
+        Map<String, Object> response = service.filterDoctor(name, speciality, time);
 
         return ResponseEntity.ok(response);
     }

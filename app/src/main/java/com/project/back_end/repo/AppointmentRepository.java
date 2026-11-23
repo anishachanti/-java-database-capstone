@@ -15,7 +15,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @Query("SELECT a FROM Appointment a " +
            "LEFT JOIN FETCH a.doctor d " +
-           "LEFT JOIN FETCH d.availability " +
            "WHERE d.id = :doctorId " +
            "AND a.appointmentTime BETWEEN :start AND :end")
     List<Appointment> findByDoctorIdAndAppointmentTimeBetween(

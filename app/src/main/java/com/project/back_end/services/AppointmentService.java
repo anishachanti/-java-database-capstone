@@ -104,14 +104,22 @@ public class AppointmentService {
         Appointment appointment = appointmentOptional.get();
 
         // Verify that the patient owns this appointment
-        Map<String, Object> tokenData = tokenService.validateToken(token, "patient");
-
-        if (tokenData == null || !tokenData.containsKey("id")) {
+        if (!tokenService.validateToken(token, "patient")) {
             response.put("message", "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
 
-        Long patientId = Long.valueOf(tokenData.get("id").toString());
+        String email = tokenService.extractIdentifier(token);
+
+        com.project.back_end.models.Patient patient =
+                patientRepository.findByEmail(email);
+
+        if (patient == null) {
+            response.put("message", "Patient not found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
+        Long patientId = patient.getId();
 
         if (!appointment.getPatient().getId().equals(patientId)) {
             response.put("message", "You are not authorized to cancel this appointment");
@@ -128,18 +136,24 @@ public class AppointmentService {
 
 public Map<String, Object> getAppointment(
         String pname, LocalDate date, String token) {
+            Map<String, Object> response = new HashMap<>();
 
-        Map<String, Object> response = new HashMap<>();
-
-        Map<String, Object> tokenData =
-                tokenService.validateToken(token, "doctor");
-
-        if (tokenData == null || !tokenData.containsKey("id")) {
+        if (!tokenService.validateToken(token, "doctor")) {
             response.put("message", "Invalid or expired token");
             return response;
         }
 
-        Long doctorId = Long.valueOf(tokenData.get("id").toString());
+        String email = tokenService.extractIdentifier(token);
+
+        com.project.back_end.models.Doctor doctor =
+                doctorRepository.findByEmail(email);
+
+        if (doctor == null) {
+            response.put("message", "Doctor not found");
+            return response;
+        }
+
+        Long doctorId = doctor.getId();
 
         LocalDateTime start = date.atStartOfDay();
         LocalDateTime end = date.atTime(23, 59, 59);

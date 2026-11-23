@@ -42,14 +42,12 @@ public class PatientService {
     public ResponseEntity<Map<String, Object>> getPatientAppointment(Long id, String token) {
         Map<String, Object> response = new HashMap<>();
     
-        Map<String, Object> tokenData = tokenService.validateToken(token, "patient");
-    
-        if (tokenData == null || !tokenData.containsKey("email")) {
+        if (!tokenService.validateToken(token, "patient")) {
             response.put("message", "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
-    
-        String email = tokenData.get("email").toString();
+
+        String email = tokenService.extractIdentifier(token);
         Patient patient = patientRepository.findByEmail(email);
     
         if (patient == null || !patient.getId().equals(id)) {
@@ -181,14 +179,12 @@ public class PatientService {
     public ResponseEntity<Map<String, Object>> getPatientDetails(String token) {
         Map<String, Object> response = new HashMap<>();
     
-        Map<String, Object> tokenData = tokenService.validateToken(token, "patient");
-    
-        if (tokenData == null || !tokenData.containsKey("email")) {
+        if (!tokenService.validateToken(token, "patient")) {
             response.put("message", "Invalid or expired token");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
         }
-    
-        String email = tokenData.get("email").toString();
+
+        String email = tokenService.extractIdentifier(token);
         Patient patient = patientRepository.findByEmail(email);
     
         if (patient == null) {
